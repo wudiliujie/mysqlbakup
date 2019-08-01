@@ -269,6 +269,7 @@ func (m *MySqlBackup) ExportToFile(fileName string) {
 	}
 	err = fileObj.Close()
 	if err != nil {
+
 		log.Error("fileObj close  %v", err)
 	}
 }
