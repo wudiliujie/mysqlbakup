@@ -1,4 +1,4 @@
-package back1
+package backup
 
 import (
 	"bufio"
