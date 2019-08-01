@@ -1,4 +1,4 @@
-package mysqlbakup
+package back1
 
 import (
 	"bufio"
