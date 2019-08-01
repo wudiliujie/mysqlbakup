@@ -1,4 +1,4 @@
-package mysqlback
+package back
 
 import (
 	"bufio"
