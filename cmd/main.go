@@ -23,4 +23,5 @@ func main() {
 	new := mysqlbakup.NewMySqlBackup(newdb)
 	new.ImportFromFile("c:/1.sql")
 	log.Debug("aaa:%v", col)
+
 }
