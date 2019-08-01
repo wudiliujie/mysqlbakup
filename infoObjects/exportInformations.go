@@ -1,9 +1,9 @@
 package infoObjects
 
 import (
-	"common/db"
 	"database/sql"
 	"fmt"
+	"github.com/wudiliujie/common/db"
 )
 
 type BlobDataExportMode int32

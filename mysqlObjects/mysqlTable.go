@@ -2,10 +2,10 @@ package mysqlObjects
 
 import (
 	"bytes"
-	"common/char"
-	"common/db"
 	"database/sql"
 	"fmt"
+	"github.com/wudiliujie/common/char"
+	"github.com/wudiliujie/common/db"
 	"strings"
 )
 

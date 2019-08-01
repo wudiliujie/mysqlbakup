@@ -1,9 +1,9 @@
 package mysqlObjects
 
 import (
-	"common/db"
-	"common/log"
 	"database/sql"
+	"github.com/wudiliujie/common/db"
+	"github.com/wudiliujie/common/log"
 )
 
 type MySqlTriggerList struct {

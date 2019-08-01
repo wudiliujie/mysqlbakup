@@ -3,11 +3,11 @@ package mysqlback
 import (
 	"bufio"
 	"bytes"
-	"common/convert"
-	"common/log"
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/wudiliujie/common/convert"
+	"github.com/wudiliujie/common/log"
 	"github.com/wudiliujie/mysqlbakup/infoObjects"
 	"github.com/wudiliujie/mysqlbakup/mysqlObjects"
 	"io"

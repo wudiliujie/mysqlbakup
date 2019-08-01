@@ -1,8 +1,8 @@
 package mysqlObjects
 
 import (
-	"common/char"
-	"common/convert"
+	"github.com/wudiliujie/common/char"
+	"github.com/wudiliujie/common/convert"
 	"reflect"
 	"strings"
 )

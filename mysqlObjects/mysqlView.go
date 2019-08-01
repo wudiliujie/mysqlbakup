@@ -1,9 +1,9 @@
 package mysqlObjects
 
 import (
-	"common/db"
 	"database/sql"
 	"fmt"
+	"github.com/wudiliujie/common/db"
 )
 
 type MySqlView struct {

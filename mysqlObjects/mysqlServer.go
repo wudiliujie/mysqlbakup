@@ -1,10 +1,10 @@
 package mysqlObjects
 
 import (
-	"common/convert"
-	"common/db"
 	"database/sql"
 	"fmt"
+	"github.com/wudiliujie/common/convert"
+	"github.com/wudiliujie/common/db"
 	"strings"
 )
 

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"common/log"
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/wudiliujie/common/log"
 	"github.com/wudiliujie/mysqlbakup"
 )
 
