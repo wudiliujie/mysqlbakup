@@ -5,7 +5,7 @@ import (
 	"common/log"
 	"database/sql"
 	"fmt"
-	"mysqlback/infoObjects"
+	"github.com/wudiliujie/mysqlbakup/infoObjects"
 	"strings"
 )
 

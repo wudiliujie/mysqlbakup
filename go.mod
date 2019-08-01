@@ -1,4 +1,4 @@
-module mysqlback
+module github.com/wudiliujie/mysqlbakup
 
 go 1.12
 
