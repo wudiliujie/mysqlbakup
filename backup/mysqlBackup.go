@@ -76,6 +76,8 @@ type MySqlBackup struct {
 	buffImport                    *bytes.Buffer
 	delimiter                     string
 	lastErrorSql                  string
+	OnExportProcessEvent          func(per int32, msg string)
+	OnImportProcessEvent          func(per int32, msg string)
 }
 
 func NewMySqlBackup(_db *sql.DB) *MySqlBackup {
@@ -255,6 +257,18 @@ func (m *MySqlBackup) ExportStart() {
 	}
 
 }
+func (m *MySqlBackup) OnExportProcess() {
+	per := m.currentRowIndexInAllTable * 100 / m.totalRowsInAllTables
+	if m.OnExportProcessEvent != nil {
+		m.OnExportProcessEvent(int32(per), m.currentTableName)
+	}
+}
+func (m *MySqlBackup) OnImportProcess() {
+	per := m.currentBytes * 100 / m.totalBytes
+	if m.OnImportProcessEvent != nil {
+		m.OnImportProcessEvent(int32(per), "导入中")
+	}
+}
 func (m *MySqlBackup) ExportToFile(fileName string) {
 	fileObj, err := os.Create(fileName)
 	if err != nil {
@@ -415,6 +429,7 @@ func (m *MySqlBackup) Export_RowsData_Insert_Ignore_Replace(tableName string, se
 		}
 		m.currentRowIndexInAllTable++
 		m.currentRowIndexInCurrentTable++
+		m.OnExportProcess()
 		if insertStatementHeader == "" {
 			insertStatementHeader = m.Export_GetInsertStatementHeader(m.exportInfo.RowsExportMode, tableName, rows)
 		}
@@ -587,6 +602,7 @@ func (m *MySqlBackup) Import_Start() {
 			m.processCompletionType = ProcessEndType_Cancelled
 			break
 		}
+		m.OnImportProcess()
 		line = m.Import_GetLine()
 		if line == "end" {
 			break
@@ -702,7 +718,9 @@ func ConvertToSqlFormat(ob interface{}, wrapStringWithSingleQuote bool, escapeSt
 				buffer.WriteString("'")
 			}
 		} else {
-			log.Debug(col.MySqlDataType)
+			if col.MySqlDataType != "blob" {
+				log.Debug(col.MySqlDataType)
+			}
 			if len(v) == 0 {
 				if wrapStringWithSingleQuote {
 					return "''"
