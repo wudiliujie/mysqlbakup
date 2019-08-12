@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/wudiliujie/common/convert"
 	"github.com/wudiliujie/common/log"
+	"github.com/wudiliujie/common/progressbar"
 	"github.com/wudiliujie/mysqlbakup/infoObjects"
 	"github.com/wudiliujie/mysqlbakup/mysqlObjects"
 	"io"
@@ -77,7 +78,8 @@ type MySqlBackup struct {
 	delimiter                     string
 	lastErrorSql                  string
 	OnExportProcessEvent          func(per int32, msg string)
-	OnImportProcessEvent          func(per int32, msg string)
+
+	pgb *progressbar.ProgressBar
 }
 
 func NewMySqlBackup(_db *sql.DB) *MySqlBackup {
@@ -227,9 +229,11 @@ func (m *MySqlBackup) ExportStart() {
 		}
 		switch stage {
 		case 1:
+
 			m.Export_BasicInfo()
 			break
 		case 2:
+
 			m.Export_CreateDatabase()
 			break
 		case 3:
@@ -263,12 +267,7 @@ func (m *MySqlBackup) OnExportProcess() {
 		m.OnExportProcessEvent(int32(per), m.currentTableName)
 	}
 }
-func (m *MySqlBackup) OnImportProcess() {
-	per := m.currentBytes * 100 / m.totalBytes
-	if m.OnImportProcessEvent != nil {
-		m.OnImportProcessEvent(int32(per), "导入中")
-	}
-}
+
 func (m *MySqlBackup) ExportToFile(fileName string) {
 	fileObj, err := os.Create(fileName)
 	if err != nil {
@@ -288,6 +287,7 @@ func (m *MySqlBackup) ExportToFile(fileName string) {
 	}
 }
 func (m *MySqlBackup) Export_BasicInfo() {
+	log.Release("导出基础信息")
 	m.WriteComment(fmt.Sprintf("MySqlBackup %v", Version))
 	if m.exportInfo.RecordDumpTime {
 		m.WriteComment(fmt.Sprintf("Dump Time:%v", m.timeStart.Format("2006-01-02 15:04:05")))
@@ -301,6 +301,7 @@ func (m *MySqlBackup) Export_CreateDatabase() {
 	if !m.exportInfo.AddCreateDatabase && !m.exportInfo.AddDropDatabase {
 		return
 	}
+	log.Release("导出创建数据库信息")
 	m.WriteLine("")
 	m.WriteLine("")
 	if m.exportInfo.AddDropDatabase {
@@ -314,6 +315,7 @@ func (m *MySqlBackup) Export_CreateDatabase() {
 	m.WriteLine("")
 }
 func (m *MySqlBackup) Export_DocumentHeader() {
+	log.Release("导出文件头信息")
 	m.WriteLine("")
 	for _, v := range m.exportInfo.GetDocumentHeaders(m.db) {
 		m.WriteLine(v)
@@ -333,14 +335,18 @@ func (m *MySqlBackup) Export_DocumentFooter() {
 func (m *MySqlBackup) Export_TableRows() {
 	tableList := m.Export_GetTablesToBeExported()
 	m.totalTables = int64(len(tableList))
+	log.Release("导出表和数据")
+	m.pgb = progressbar.NewOptions64(m.totalRowsInAllTables, progressbar.OptionShowIts(), progressbar.OptionShowCount())
 	if m.exportInfo.ExportTableStructure || m.exportInfo.ExportRows {
 
 		for _, v := range tableList {
+
 			tableName, selectSQL := v.K, v.V
 			exclude := m.Export_ThisTableIsExcluded(tableName)
 			if exclude {
 				continue
 			}
+			m.pgb.Describe(tableName)
 			m.currentTableName = tableName
 			m.currentTableIndex++
 			m.totalRowsInCurrentTable = m.dataBase.GetTable(tableName).GetTotalRows()
@@ -428,6 +434,7 @@ func (m *MySqlBackup) Export_RowsData_Insert_Ignore_Replace(tableName string, se
 			return
 		}
 		m.currentRowIndexInAllTable++
+		m.pgb.Add64(1)
 		m.currentRowIndexInCurrentTable++
 		m.OnExportProcess()
 		if insertStatementHeader == "" {
@@ -595,14 +602,14 @@ func (m *MySqlBackup) Import_Start() {
 		log.Error("Import_Start:%v", err)
 		return
 	}
-
+	m.pgb = progressbar.NewOptions64(m.totalBytes, progressbar.OptionSetBytes64(m.totalBytes))
 	line := ""
 	for true {
 		if m.stopProcess {
 			m.processCompletionType = ProcessEndType_Cancelled
 			break
 		}
-		m.OnImportProcess()
+
 		line = m.Import_GetLine()
 		if line == "end" {
 			break
@@ -639,6 +646,7 @@ func (m *MySqlBackup) Import_GetLine() string {
 		return ""
 	}
 	m.currentBytes += int64(len(line))
+	m.pgb.Add64(int64(len(line)))
 	line = strings.TrimSpace(line)
 	return line
 }
