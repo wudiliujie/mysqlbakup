@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wudiliujie/common/convert"
+	"github.com/wudiliujie/common/db"
 	"github.com/wudiliujie/common/log"
 	"github.com/wudiliujie/common/progressbar"
 	"github.com/wudiliujie/mysqlbakup/infoObjects"
@@ -92,6 +93,18 @@ func (m *MySqlBackup) Init(_db *sql.DB) {
 	m.dataBase = mysqlObjects.NewMySqlDatabase()
 	m.exportInfo = infoObjects.NewExportInformations()
 	m.server = mysqlObjects.NewMysqlServer()
+}
+func (m *MySqlBackup) GetDBList() []string {
+	dt, err := db.QueryDataTable(m.db, "show databases;")
+	ret := make([]string, 0)
+	if err != nil {
+		log.Error("MySqlBackup %v", err)
+		return ret
+	}
+	for _, row := range dt.DataRows {
+		ret = append(ret, row.GetStringIdx(0))
+	}
+	return ret
 }
 
 //导出初始化变量
@@ -336,7 +349,7 @@ func (m *MySqlBackup) Export_TableRows() {
 	tableList := m.Export_GetTablesToBeExported()
 	m.totalTables = int64(len(tableList))
 	log.Release("导出表和数据")
-	m.pgb = progressbar.NewOptions64(m.totalRowsInAllTables, progressbar.OptionShowIts(), progressbar.OptionShowCount())
+	m.pgb = progressbar.NewOptions64(m.totalRowsInAllTables, progressbar.OptionShowIts())
 	if m.exportInfo.ExportTableStructure || m.exportInfo.ExportRows {
 
 		for _, v := range tableList {
@@ -713,7 +726,7 @@ func ConvertToSqlFormat(ob interface{}, wrapStringWithSingleQuote bool, escapeSt
 			buffer.WriteString("0")
 		}
 	} else if v, ok := ob.([]uint8); ok {
-		if col.MySqlDataType == "varchar" || col.MySqlDataType == "text" {
+		if col.MySqlDataType == "varchar" || col.MySqlDataType == "text" || col.MySqlDataType == "char" {
 			str := string(v)
 			if escapeStringSequence {
 				str = EscapeStringSequence(str)
@@ -725,9 +738,30 @@ func ConvertToSqlFormat(ob interface{}, wrapStringWithSingleQuote bool, escapeSt
 			if wrapStringWithSingleQuote {
 				buffer.WriteString("'")
 			}
+		} else if col.MySqlDataType == "bigint" {
+			str := string(v)
+			buffer.WriteString(str)
+		} else if col.MySqlDataType == "time" {
+			str := string(v)
+			if wrapStringWithSingleQuote {
+				buffer.WriteString("'")
+			}
+			buffer.WriteString(str)
+			if wrapStringWithSingleQuote {
+				buffer.WriteString("'")
+			}
+		} else if col.MySqlDataType == "decimal" {
+			str := string(v)
+			buffer.WriteString(str)
+		} else if col.MySqlDataType == "bit" {
+			if v[0] == 1 {
+				buffer.WriteString("1")
+			} else {
+				buffer.WriteString("0")
+			}
 		} else {
 			if col.MySqlDataType != "blob" {
-				log.Debug(col.MySqlDataType)
+				log.Debug("col.MySqlDataType:%v %v", col.GetName(), col.MySqlDataType)
 			}
 			if len(v) == 0 {
 				if wrapStringWithSingleQuote {
@@ -763,6 +797,10 @@ func ConvertToSqlFormat(ob interface{}, wrapStringWithSingleQuote bool, escapeSt
 	} else if v, ok := ob.(int); ok {
 		buffer.WriteString(convert.ToString(v))
 	} else if v, ok := ob.(int64); ok {
+		buffer.WriteString(convert.ToString(v))
+	} else if v, ok := ob.(float64); ok {
+		buffer.WriteString(convert.ToString(v))
+	} else if v, ok := ob.(float32); ok {
 		buffer.WriteString(convert.ToString(v))
 	} else {
 		log.Fatal("类型不存在：%v", reflect.TypeOf(ob))

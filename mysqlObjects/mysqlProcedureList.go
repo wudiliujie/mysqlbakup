@@ -22,7 +22,7 @@ func NewMySqlProcedureList(_db *sql.DB) *MySqlProcedureList {
 		dt = db.CreateTable()
 	}
 	for _, v := range dt.DataRows {
-		p := NewMySqlProcedure(_db, v.GetString("_name"), v.GetString("Definer"))
+		p := NewMySqlProcedure(_db, v.GetStringIdx(1), v.GetStringIdx(3))
 		if p != nil {
 			procedureList._lst = append(procedureList._lst, p)
 		}
