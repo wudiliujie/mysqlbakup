@@ -295,9 +295,9 @@ func (m *MySqlBackup) ExportToFile(fileName string) {
 	}
 	err = fileObj.Close()
 	if err != nil {
-
 		log.Error("fileObj close  %v", err)
 	}
+	fmt.Println("")
 }
 func (m *MySqlBackup) Export_BasicInfo() {
 	log.Release("导出基础信息")
@@ -447,13 +447,14 @@ func (m *MySqlBackup) Export_RowsData_Insert_Ignore_Replace(tableName string, se
 			return
 		}
 		m.currentRowIndexInAllTable++
-		m.pgb.Add64(1)
+		_ = m.pgb.Add64(1)
 		m.currentRowIndexInCurrentTable++
 		m.OnExportProcess()
 		if insertStatementHeader == "" {
-			insertStatementHeader = m.Export_GetInsertStatementHeader(m.exportInfo.RowsExportMode, tableName, rows)
+			table := m.dataBase.GetTable(tableName)
+			insertStatementHeader = Export_GetInsertStatementHeader(m.exportInfo.RowsExportMode, table, rows)
 		}
-		sqlDataRow := m.Export_GetValueString(rows, table)
+		sqlDataRow := Export_GetValueString(rows, table, m.exportInfo.BlobExportMode)
 		if buffer.Len() == 0 {
 			buffer.WriteString(insertStatementHeader)
 			buffer.WriteString(sqlDataRow)
@@ -476,7 +477,7 @@ func (m *MySqlBackup) Export_RowsData_Insert_Ignore_Replace(tableName string, se
 	_ = m.writeObj.Flush()
 }
 
-func (m *MySqlBackup) Export_GetInsertStatementHeader(rowsExportMode infoObjects.RowsDataExportMode, tableName string, rows *sql.Rows) string {
+func Export_GetInsertStatementHeader(rowsExportMode infoObjects.RowsDataExportMode, table *mysqlObjects.MySqlTable, rows *sql.Rows) string {
 	buffer := bytes.Buffer{}
 	if rowsExportMode == infoObjects.RowsDataExportMode_Insert {
 		buffer.WriteString("INSERT INTO `")
@@ -485,7 +486,7 @@ func (m *MySqlBackup) Export_GetInsertStatementHeader(rowsExportMode infoObjects
 	} else if rowsExportMode == infoObjects.RowsDataExportMode_Replace {
 		buffer.WriteString("REPLACE INTO `")
 	}
-	buffer.WriteString(tableName)
+	buffer.WriteString(table.GetName())
 	buffer.WriteString("`(")
 	columns, err := rows.Columns()
 	if err != nil {
@@ -494,7 +495,7 @@ func (m *MySqlBackup) Export_GetInsertStatementHeader(rowsExportMode infoObjects
 	}
 	for i := 0; i < len(columns); i++ {
 		colName := columns[i]
-		if m.dataBase.GetTable(tableName).GetColumns(colName).GetIsGeneratedColumn() {
+		if table.GetColumns(colName).GetIsGeneratedColumn() {
 			continue
 		}
 		if i > 0 {
@@ -506,11 +507,9 @@ func (m *MySqlBackup) Export_GetInsertStatementHeader(rowsExportMode infoObjects
 	}
 	buffer.WriteString(") VALUES")
 	return buffer.String()
-
-	return ""
 }
 
-func (m *MySqlBackup) Export_GetValueString(rows *sql.Rows, table *mysqlObjects.MySqlTable) string {
+func Export_GetValueString(rows *sql.Rows, table *mysqlObjects.MySqlTable, exportMode infoObjects.BlobDataExportMode) string {
 	buffer := bytes.Buffer{}
 	columns, err := rows.Columns()
 	if err != nil {
@@ -540,7 +539,7 @@ func (m *MySqlBackup) Export_GetValueString(rows *sql.Rows, table *mysqlObjects.
 		} else {
 			buffer.WriteString(",")
 		}
-		buffer.WriteString(ConvertToSqlFormat(container[i], true, true, table.GetColumns(columnName), m.exportInfo.BlobExportMode))
+		buffer.WriteString(ConvertToSqlFormat(container[i], true, true, table.GetColumns(columnName), exportMode))
 
 	}
 	buffer.WriteString(")")
