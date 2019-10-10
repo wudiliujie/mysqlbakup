@@ -6,17 +6,18 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/wudiliujie/common/convert"
 	"github.com/wudiliujie/common/db"
 	"github.com/wudiliujie/common/log"
 	"github.com/wudiliujie/common/progressbar"
 	"github.com/wudiliujie/mysqlbakup/infoObjects"
 	"github.com/wudiliujie/mysqlbakup/mysqlObjects"
-	"io"
-	"os"
-	"reflect"
-	"strings"
-	"time"
 )
 
 type ProcessEndType int32
@@ -242,11 +243,9 @@ func (m *MySqlBackup) ExportStart() {
 		}
 		switch stage {
 		case 1:
-
 			m.Export_BasicInfo()
 			break
 		case 2:
-
 			m.Export_CreateDatabase()
 			break
 		case 3:
@@ -299,6 +298,47 @@ func (m *MySqlBackup) ExportToFile(fileName string) {
 	}
 	fmt.Println("")
 }
+
+//mzky
+func (m *MySqlBackup) ExportTableToFile(fileName, tableName string) {
+	fileObj, err := os.Create(fileName)
+	if err != nil {
+		log.Error("ExportToFile:%v", err)
+		return
+	}
+	m.writeObj = bufio.NewWriterSize(fileObj, 4096)
+
+	m.Export_InitializeVariables()
+
+	tableList := m.Export_GetTablesToBeExported()
+	m.totalTables = int64(len(tableList))
+	log.Release("导出表和数据")
+	m.pgb = progressbar.NewOptions64(m.totalRowsInAllTables, progressbar.OptionShowIts())
+	if m.exportInfo.ExportTableStructure || m.exportInfo.ExportRows {
+		m.Export_ThisTableIsExcluded(tableName)
+		m.pgb.Describe(tableName)
+		m.currentTableName = tableName
+		m.currentTableIndex++
+		m.totalRowsInCurrentTable = m.dataBase.GetTable(tableName).GetTotalRows()
+		if m.exportInfo.ExportTableStructure {
+			m.Export_TableStructure(tableName)
+		}
+		if m.exportInfo.ExportRows {
+			m.Export_Rows(tableName, "SELECT * FROM `"+tableName+"`;")
+		}
+	}
+
+	err = m.writeObj.Flush()
+	if err != nil {
+		log.Error("ExportToFile flush %v", err)
+	}
+	err = fileObj.Close()
+	if err != nil {
+		log.Error("fileObj close  %v", err)
+	}
+	fmt.Println("")
+}
+
 func (m *MySqlBackup) Export_BasicInfo() {
 	log.Release("导出基础信息")
 	m.WriteComment(fmt.Sprintf("MySqlBackup %v", Version))
@@ -355,6 +395,7 @@ func (m *MySqlBackup) Export_TableRows() {
 		for _, v := range tableList {
 
 			tableName, selectSQL := v.K, v.V
+			fmt.Println(v.V)
 			exclude := m.Export_ThisTableIsExcluded(tableName)
 			if exclude {
 				continue
