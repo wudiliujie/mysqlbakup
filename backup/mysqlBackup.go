@@ -94,6 +94,9 @@ func (m *MySqlBackup) Init(_db *sql.DB) {
 	m.exportInfo = infoObjects.NewExportInformations()
 	m.server = mysqlObjects.NewMysqlServer()
 }
+func (m *MySqlBackup) GetExportInfo() *infoObjects.ExportInformations {
+	return m.exportInfo
+}
 func (m *MySqlBackup) GetDBList() []string {
 	dt, err := db.QueryDataTable(m.db, "show databases;")
 	ret := make([]string, 0)
