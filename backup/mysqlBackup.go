@@ -278,7 +278,10 @@ func (m *MySqlBackup) ExportStart() {
 
 }
 func (m *MySqlBackup) OnExportProcess() {
-	per := m.currentRowIndexInAllTable * 100 / m.totalRowsInAllTables
+	per := int64(0)
+	if m.totalRowsInCurrentTable > 0 {
+		per = m.currentRowIndexInAllTable * 100 / m.totalRowsInAllTables
+	}
 	if m.OnExportProcessEvent != nil {
 		m.OnExportProcessEvent(int32(per), m.currentTableName)
 	}
